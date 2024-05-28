@@ -39,6 +39,39 @@ static float best_single_thread(const float* a, const float* b, const int no_ite
 
     return *_s;
 }
+
+static float best_single_thread512(const float* a, const float* b, const int no_iters) {
+
+    __m512 s_0, s_1, s_2, s_3;
+    float _s[16];
+
+    for (int j = 0; j < no_iters; j++)
+        {
+            s_0 = _mm512_setzero_ps();
+            s_1 = _mm512_setzero_ps();
+            s_2 = _mm512_setzero_ps();
+            s_3 = _mm512_setzero_ps();
+            for (int i = 0; i < 2048; i += 64)
+            {
+                s_0 = _mm512_fmadd_ps(_mm512_load_ps(a + i), _mm512_load_ps(b + i), s_0);
+                s_1 = _mm512_fmadd_ps(_mm512_load_ps(a + i + 16), _mm512_load_ps(b + i + 16), s_1);
+                s_2 = _mm512_fmadd_ps(_mm512_load_ps(a + i + 32), _mm512_load_ps(b + i + 32), s_2);
+                s_3 = _mm512_fmadd_ps(_mm512_load_ps(a + i + 48), _mm512_load_ps(b + i + 48), s_3);
+            }
+            s_0 = _mm512_add_ps(s_0, s_1);
+            s_0 = _mm512_add_ps(s_0, s_2);
+            s_0 = _mm512_add_ps(s_0, s_3);
+
+            _mm512_storeu_ps(_s, s_0);
+            for (int i = 1; i < 16; i++)
+            {
+                _s[0] += _s[i];
+            }
+        }
+
+    return *_s;
+}
+
 /*
 static float best_single_thread_c(const float* cache, const int no_iters) {
 
@@ -475,6 +508,29 @@ int main(int argc, char* argv[])
         std::cout << "8 Threads value:\t\t\t" << std::setprecision(10) << *_s
             << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
     }*/
+
+    {
+        const float *a = _a, *b = _b;
+        float _s[8];
+
+        std::vector<std::future<float>> threads;
+
+        begin = std::chrono::steady_clock::now();
+
+        for (int i = 0; i < 12; i++)
+        {
+            threads.push_back(std::async(best_single_thread512, a, b, 200000 / 12));
+        }
+
+        for (int i = 0; i < 12; i++) {
+            _s[i] = threads[i].get();
+        }
+
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "8 Threads value:\t\t\t" << std::setprecision(10) << *_s
+            << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+    }
     
     return 0;
 }
