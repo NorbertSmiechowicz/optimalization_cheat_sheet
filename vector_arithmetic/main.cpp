@@ -39,19 +39,18 @@ static float best_single_thread(const float* a, const float* b, const int no_ite
 
     return *_s;
 }
+
 int main(int argc, char* argv[])
 {
-    float _a[2048], _b[2048];
-    for (int i = 0; i < 2048; i++)
-    {
-        _a[i] = i;
-        _b[i] = 2047.0 - i;
+    float a[2048], b[2048];
+    for (int i = 0; i < 2048; i++){
+        a[i] = i;
+        b[i] = 2047.0 - i;
     }
 
     std::chrono::steady_clock::time_point begin, end;
     
     {   
-        const float *a = _a, *b = _b;
         float s;
         begin = std::chrono::steady_clock::now();
         for (int j = 0; j < 200000; j++)
@@ -68,7 +67,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        const float *a = _a, *b = _b;
         __m128 s;
         float _s[4];
         begin = std::chrono::steady_clock::now();
@@ -91,7 +89,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        const float *a = _a, *b = _b;
         __m256 s;
         float _s[8];
         begin = std::chrono::steady_clock::now();
@@ -114,7 +111,6 @@ int main(int argc, char* argv[])
     }
 
     /*{
-        const float *a = _a, *b = _b;
         __m512 s;
         float _s[16];
         begin = std::chrono::steady_clock::now();
@@ -139,7 +135,6 @@ int main(int argc, char* argv[])
     std::cout << "-------------------------\n";
 
     /* {
-        const float *a = _a, *b = _b;
         float s_0, s_1;
         begin = std::chrono::steady_clock::now();
         for (int j = 0; j < 200000; j++)
@@ -159,7 +154,6 @@ int main(int argc, char* argv[])
     }*/
 
     {
-        const float *a = _a, *b = _b;
         __m256 s_0, s_1;
         float _s[8];
         begin = std::chrono::steady_clock::now();
@@ -185,7 +179,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        const float *a = _a, *b = _b;
         __m256 s_0, s_1, s_2;
         float _s[8];
         begin = std::chrono::steady_clock::now();
@@ -216,7 +209,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        const float *a = _a, *b = _b;
         __m256 s_0, s_1, s_2, s_3;
         float _s[8];
         begin = std::chrono::steady_clock::now();
@@ -251,7 +243,6 @@ int main(int argc, char* argv[])
     std::cout << "-------------------------\n";
 
     {
-        const float *a = _a, *b = _b;
         __m256 s;
         float _s[8];
         begin = std::chrono::steady_clock::now();
@@ -274,7 +265,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        const float *a = _a, *b = _b;
         __m256 s_0, s_1, s_2, s_3;
         float _s[8];
 
@@ -308,7 +298,6 @@ int main(int argc, char* argv[])
     }
 
     /*{
-        const float *a = _a, *b = _b;
         __m256 s_0, s_1, s_2, s_3;
         float _s[8];
         float cache[4096];
@@ -353,7 +342,6 @@ int main(int argc, char* argv[])
     std::cout << "-------------------------\n";
    
     /*{
-        const float *a = _a, *b = _b;
         float _s[8];
 
         begin = std::chrono::steady_clock::now();
@@ -366,7 +354,6 @@ int main(int argc, char* argv[])
     }*/
 
     {
-        const float *a = _a, *b = _b;
         float _s[8];
 
         std::vector<std::future<float>> threads;
@@ -388,7 +375,6 @@ int main(int argc, char* argv[])
     }
 
     {
-        const float *a = _a, *b = _b;
         float _s[8];
 
         std::vector<std::future<float>> threads;
@@ -411,7 +397,6 @@ int main(int argc, char* argv[])
     }
 
     /*{
-        const float *a = _a, *b = _b;
         float _s[8];
 
         std::vector<std::future<float>> threads;
@@ -444,7 +429,6 @@ int main(int argc, char* argv[])
     }*/
 
     /*{
-        const float *a = _a, *b = _b;
         float _s[12];
 
         std::vector<std::future<float>> threads;
