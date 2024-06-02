@@ -1,9 +1,9 @@
 #include <immintrin.h>
 #include <array>
+#include <vector>
 #include <iostream>
 // only used for testing in main
 #include <chrono>
-#include <iomanip>
 
 template<size_t length, typename T>
 static void print_arr(
@@ -65,6 +65,24 @@ static std::array<std::array<T, columns>, rows> mat_mul(
     for(size_t _row = 0; _row < rows; _row++){
         for(size_t _cln = 0; _cln < columns; _cln++){
             for(size_t _cmn = 0; _cmn < common; _cmn++)
+            {  
+                C[_row][_cln] += A[_row][_cmn] * B[_cmn][_cln];
+            }
+        }
+    }
+    return C;
+}
+
+template<typename T>
+static std::vector<std::vector<T>> mat_mul(   
+        const std::vector<std::vector<T>> A, 
+        const std::vector<std::vector<T>> B) 
+{
+    std::vector<std::vector<T>> C(A.size(), std::vector<T>(B[0].size()));
+
+    for(size_t _row = 0; _row < A.size(); _row++){
+        for(size_t _cln = 0; _cln < B[0].size(); _cln++){
+            for(size_t _cmn = 0; _cmn < B.size(); _cmn++)
             {  
                 C[_row][_cln] += A[_row][_cmn] * B[_cmn][_cln];
             }
@@ -198,7 +216,8 @@ static std::array<std::array<float, columns>, rows> mat_mul_3(
     std::array<std::array<float, columns>, rows> C;
 
     for(size_t _row = 0; _row < rows; _row++){
-        for(size_t _cln = 0; _cln < columns; _cln++){
+        for(size_t _cln = 0; _cln < columns; _cln++)
+        {
             C[_row][_cln] = vec_conv_3(A[_row].data(),B[_cln].data(),A[_row].size());
         }
     }
@@ -241,6 +260,37 @@ static float vec_conv_3(
     }
     return uarr[0];
 }
+
+static std::vector<std::vector<float>> mat_mul_3(   
+        const std::vector<std::vector<float>> A, 
+        const std::vector<std::vector<float>> B) 
+{
+    std::vector<std::vector<float>> C(A.size(), std::vector<float>(B.size()));
+
+    for(size_t row = 0; row < A.size(); row++){
+        for(size_t column = 0; column < B.size(); column++)
+        {
+            C[row][column] = vec_conv_3(A[row].data(),B[column].data(),A[row].size());
+        }
+    }
+
+    return C;
+}
+
+template<typename T>
+static std::vector<std::vector<T>> mat_transpose(   
+        const std::vector<std::vector<T>> A)
+{
+    std::vector<std::vector<T>> B(A[0].size(), std::vector<float>(A.size()));
+
+    for(size_t _row = 0; _row < A.size(); _row++){
+        for(size_t _cln = 0; _cln < A[0].size(); _cln++){
+            B[_cln][_row] = A[_row][_cln];
+        }
+    }
+
+    return B;
+} 
 
 int main(){
 
@@ -357,7 +407,7 @@ int main(){
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << std::setprecision(10) << "Default Time:\t" 
+        std::cout << "Default Time:\t\t\t" 
             << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
         
 
@@ -371,7 +421,7 @@ int main(){
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << std::setprecision(10) << "1st Optim Time:\t" 
+        std::cout << "1st Optim Time:\t\t\t" 
             << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
 
         begin = std::chrono::steady_clock::now();
@@ -384,7 +434,7 @@ int main(){
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << std::setprecision(10) << "2st Optim Time:\t" 
+        std::cout << "2st Optim Time:\t\t\t" 
             << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
 
         begin = std::chrono::steady_clock::now();
@@ -397,7 +447,60 @@ int main(){
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << std::setprecision(10) << "3st Optim Time:\t" 
+        std::cout << "3st Optim Time:\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+
+        auto a1 = [](){
+            const size_t rows = 100, columns = 200;
+            std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
+            for(int i = 0; i < rows; i++){
+                for(int j = 0; j<columns; j++)
+                {
+                    _a[i][j] = i;
+                }
+            }
+            return _a;
+        }();
+
+        auto b1 = [](){
+            const size_t rows = 200, columns = 100;
+            std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
+            for(int i = 0; i < rows; i++){
+                for(int j = 0; j<columns; j++)
+                {
+                    _a[i][j] = j;
+                }
+            }
+            return _a;
+        }();
+        
+        std::cout<<"---------------------------------\n";
+
+        begin = std::chrono::steady_clock::now();
+
+        auto bt1 = mat_transpose(b1);
+        auto c1 = mat_mul_3(a1,bt1);
+        for(size_t i = 0; i < 1'000; i++){
+            bt1 = mat_transpose(b1);
+            c1 = mat_mul(a1,bt1);
+        }
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "Raw Array -> Vector Time:\t" 
+            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+
+
+        begin = std::chrono::steady_clock::now();
+
+        bt1 = mat_transpose(b1);
+        c1 = mat_mul_3(a1,bt1);
+        for(size_t i = 0; i < 1'000; i++){
+            bt1 = mat_transpose(b1);
+            c1 = mat_mul_3(a1,bt1);
+        }
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "Optim3 Array -> Vector Time:\t" 
             << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
 
     }
