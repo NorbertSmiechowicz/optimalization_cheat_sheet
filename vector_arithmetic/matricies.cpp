@@ -30,6 +30,35 @@ static void print_arr(
     std::cout<<"\n";
 }
 
+template<typename T>
+static void print_arr(
+    const std::vector<std::vector<T>> arr)
+{
+    for(int _row = 0; _row < arr.size(); _row++){
+        for(int _cln = 0; _cln < arr[0].size(); _cln++)
+        {
+            std::cout<<arr[_row][_cln]<<" ";
+        }
+        std::cout<<"\n";
+    }
+    std::cout<<"\n";
+}
+
+
+template<size_t rows, size_t columns, typename T>
+inline static void print_arr_dims(
+    const std::array<std::array<T, columns>, rows> arr)
+{
+    std::cout<<"{ " << arr.size()<<" x "<<arr[0].size()<<" }";
+}
+
+template<typename T>
+inline static void print_arr_dims(
+    const std::vector<std::vector<T>> arr)
+{
+    std::cout<<"{ " << arr.size()<<" x "<<arr[0].size()<<" }";
+}
+
 template<size_t length>
 static std::array<float, length> vec_mul(   
     const std::array<float, length> v,
@@ -399,58 +428,97 @@ int main(){
             return _a;
         }();
 
+        const size_t repeats = 1'000;
+
+        std::cout<<"------------------------------------------------------\n";
+        std::cout<<"# of calcs " << repeats << ", A : ";
+        print_arr_dims(a);
+        std::cout<<"  B : ";
+        print_arr_dims(b);
+        std::cout<<"\n------------------------------------------------------\n";
+
         begin = std::chrono::steady_clock::now();
 
         auto c = mat_mul(a,b);
-        for(size_t i = 0; i < 1'000; i++){
+        for(size_t i = 0; i < repeats; i++){
             c = mat_mul(a,b);
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << "Default Time:\t\t\t" 
-            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+        std::cout << "Default Time:\t\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
         
 
         begin = std::chrono::steady_clock::now();
 
         auto bt = mat_transpose(b);
         c = mat_mul_1(a,bt);
-        for(size_t i = 0; i < 1'000; i++){
+        for(size_t i = 0; i < repeats; i++){
             bt = mat_transpose(b);
             c = mat_mul_1(a,bt);
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << "1st Optim Time:\t\t\t" 
-            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+        std::cout << "1st Optim Time:\t\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
 
         begin = std::chrono::steady_clock::now();
 
         bt = mat_transpose(b);
         c = mat_mul_2(a,bt);
-        for(size_t i = 0; i < 1'000; i++){
+        for(size_t i = 0; i < repeats; i++){
             bt = mat_transpose(b);
             c = mat_mul_2(a,bt);
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << "2st Optim Time:\t\t\t" 
-            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+        std::cout << "2st Optim Time:\t\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
 
         begin = std::chrono::steady_clock::now();
 
-        bt = mat_transpose(b);
-        c = mat_mul_3(a,bt);
-        for(size_t i = 0; i < 1'000; i++){
-            bt = mat_transpose(b);
-            c = mat_mul_3(a,bt);
+        c = mat_mul_3(a,mat_transpose(b));
+        for(size_t i = 0; i < repeats; i++){
+            c = mat_mul_3(a,mat_transpose(b));
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << "3st Optim Time:\t\t\t" 
-            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+        std::cout << "3st Optim Time:\t\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
+    }
 
-        auto a1 = [](){
+    /*{   // testing for correctness of outputs
+        
+        auto a = [](){
+            const size_t rows = 10, columns = 10;
+            std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
+            for(int i = 0; i < rows; i++){
+                for(int j = 0; j<columns; j++)
+                {
+                    _a[i][j] = i;
+                }
+            }
+            return _a;
+        }();
+
+        auto b = [](){
+            const size_t rows = 10, columns = 10;
+            std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
+            for(int i = 0; i < rows; i++){
+                for(int j = 0; j<columns; j++)
+                {
+                    _a[i][j] = j;
+                }
+            }
+            return _a;
+        }();
+        print_arr(a);
+        print_arr(b);
+        print_arr(mat_mul_3(a,mat_transpose(b)));
+    }*/
+
+    {
+        auto a = [](){
             const size_t rows = 100, columns = 200;
             std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
             for(int i = 0; i < rows; i++){
@@ -462,7 +530,7 @@ int main(){
             return _a;
         }();
 
-        auto b1 = [](){
+        auto b = [](){
             const size_t rows = 200, columns = 100;
             std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
             for(int i = 0; i < rows; i++){
@@ -473,35 +541,40 @@ int main(){
             }
             return _a;
         }();
-        
-        std::cout<<"---------------------------------\n";
+
+        const size_t repeats = 1'000;
+
+        std::cout<<"------------------------------------------------------\n";
+        std::cout<<"# of calcs " << repeats << ", A : ";
+        print_arr_dims(a);
+        std::cout<<"  B : ";
+        print_arr_dims(b);
+        std::cout<<"\n------------------------------------------------------\n";
 
         begin = std::chrono::steady_clock::now();
 
-        auto bt1 = mat_transpose(b1);
-        auto c1 = mat_mul_3(a1,bt1);
-        for(size_t i = 0; i < 1'000; i++){
-            bt1 = mat_transpose(b1);
-            c1 = mat_mul(a1,bt1);
+        auto bt = mat_transpose(b);
+        auto c = mat_mul_3(a,bt);
+        for(size_t i = 0; i < repeats; i++){
+            bt = mat_transpose(b);
+            c = mat_mul(a,bt);
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << "Raw Array -> Vector Time:\t" 
-            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+        std::cout << "Default Array -> Vector Time:\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
 
 
         begin = std::chrono::steady_clock::now();
 
-        bt1 = mat_transpose(b1);
-        c1 = mat_mul_3(a1,bt1);
-        for(size_t i = 0; i < 1'000; i++){
-            bt1 = mat_transpose(b1);
-            c1 = mat_mul_3(a1,bt1);
+        c = mat_mul_3(a,mat_transpose(b));
+        for(size_t i = 0; i < repeats; i++){
+            c = mat_mul_3(a,mat_transpose(b));
         }
 
         end = std::chrono::steady_clock::now();
-        std::cout << "Optim3 Array -> Vector Time:\t" 
-            << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+        std::cout << "Optim3 Array -> Vector Time:\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
 
     }
 
