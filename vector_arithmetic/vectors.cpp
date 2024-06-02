@@ -6,7 +6,6 @@
 #include <thread>
 #include <vector>
 #include <future>
-#include "vecs.h"
 
 
 static float best_single_thread(const float* a, const float* b, const int no_iters) {
