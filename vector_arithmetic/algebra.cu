@@ -60,16 +60,17 @@ int main() {
 
     auto begin = std::chrono::steady_clock::now();
 
-    vec_conv << <1, thread_count >> > (d_A, d_B, size, d_C);
+    for (int i = 0; i < 1000; i++) 
+    {
+        vec_conv << <1, thread_count >> > (d_A, d_B, size, d_C);
+    }
 
     auto end = std::chrono::steady_clock::now();
 
-    std::cout << "Default Time:\t\t"
-        << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+    std::cout << "Default CUDA Time:\t\t\t"
+        << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
 
     cudaMemcpy(h_C.data(), d_C, h_C.size() * sizeof(float), cudaMemcpyDeviceToHost);
-
-    print_vec(h_C);
 
     cudaFree(d_A);
     cudaFree(d_B);

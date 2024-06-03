@@ -519,24 +519,24 @@ int main(){
 
     {
         auto a = [](){
-            const size_t rows = 100, columns = 200;
+            const size_t rows = 200, columns = 10'000;
             std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
                 {
-                    _a[i][j] = static_cast<float>(i);
+                    _a[i][j] = static_cast<float>(i) / 1000.0;
                 }
             }
             return _a;
         }();
 
         auto b = [](){
-            const size_t rows = 200, columns = 100;
+            const size_t rows = 10'000, columns = 1;
             std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
                 {
-                    _a[i][j] = static_cast<float>(j);
+                    _a[i][j] = 1.0;
                 }
             }
             return _a;
@@ -568,7 +568,7 @@ int main(){
         begin = std::chrono::steady_clock::now();
 
         c = mat_mul_3(a,mat_transpose(b));
-        for(size_t i = 0; i < repeats; i++){
+        for(size_t i = 1; i < repeats; i++){
             c = mat_mul_3(a,mat_transpose(b));
         }
 
