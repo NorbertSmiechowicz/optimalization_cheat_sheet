@@ -410,7 +410,7 @@ int main(){
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
                 {
-                    _a[i][j] = i;
+                    _a[i][j] = static_cast<float>(i);
                 }
             }
             return _a;
@@ -422,7 +422,7 @@ int main(){
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
                 {
-                    _a[i][j] = j;
+                    _a[i][j] = static_cast<float>(j);
                 }
             }
             return _a;
@@ -524,7 +524,7 @@ int main(){
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
                 {
-                    _a[i][j] = i;
+                    _a[i][j] = static_cast<float>(i);
                 }
             }
             return _a;
@@ -536,7 +536,7 @@ int main(){
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
                 {
-                    _a[i][j] = j;
+                    _a[i][j] = static_cast<float>(j);
                 }
             }
             return _a;
