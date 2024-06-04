@@ -4,12 +4,13 @@
 #include <vector>
 
 template<typename T>
-class cuda_ptr
+class cuda_1D_array
 {
 public:
 
-    cuda_ptr() noexcept : cuda_ptr{ nullptr } {}
-    explicit cuda_ptr(size_t size) noexcept : dev_size{ size }
+    cuda_1D_array() noexcept : cuda_1D_array{ nullptr } {}
+    explicit cuda_1D_array(size_t size) noexcept : 
+        dev_size{ size }
     {
         cudaError_t state = cudaMalloc((void**)&dev_pointer, dev_size * sizeof(T));
         if (state == cudaErrorMemoryAllocation) 
@@ -18,7 +19,27 @@ public:
         }
     }
 
-    ~cuda_ptr() noexcept 
+    cuda_1D_array(const cuda_1D_array&) = delete;
+    cuda_1D_array& operator=(const cuda_1D_array&) = delete;
+
+    T* release() noexcept { return std::exchange(dev_pointer, nullptr); }
+    void reset(T* ptr_to_assign = nullptr) noexcept 
+    {
+        T* previous = std::exchange(dev_pointer, ptr_to_assign);
+        if (ptr_to_assign) delete(ptr_to_assign);
+    }
+
+    cuda_1D_array(cuda_1D_array&& other) noexcept : dev_pointer{ other.release() } {}
+    cuda_1D_array& operator=(cuda_1D_array&& other) noexcept 
+    {
+        if (this != &other) 
+        {
+            reset(other.release());
+        }
+        return *this;
+    }
+
+    ~cuda_1D_array() noexcept 
     {
         cudaError_t state = cudaFree(dev_pointer);
     }
@@ -26,9 +47,26 @@ public:
     size_t size() { return dev_size; }
     T* data() { return dev_pointer; }
 
-    inline cudaError_t store(std::vector<T> a)
+
+    inline cudaError_t load_from_host(const T *src, const size_t items)
     {
-        return cudaMemcpy(dev_pointer, a.data(), dev_size * sizeof(T), cudaMemcpyHostToDevice);
+        size_t memory_region = items > dev_size ? dev_size : items;
+        memory_region *= sizeof(T);
+        return cudaMemcpy(dev_pointer, src, memory_region, cudaMemcpyHostToDevice);
+    }
+
+    inline cudaError_t load_from_device(const T* src, const size_t items)
+    {
+        size_t memory_region = items > dev_size ? dev_size : items;
+        memory_region *= sizeof(T);
+        return cudaMemcpy(dev_pointer, src, memory_region, cudaMemcpyDeviceToDevice);
+    }
+
+    inline cudaError_t load_into_host(T *dst, const size_t items)
+    {
+        size_t memory_region = items > dev_size ? dev_size : items;
+        memory_region *= sizeof(T);
+        return cudaMemcpy(dst, dev_pointer, memory_region, cudaMemcpyDeviceToHost);
     }
 
 private:
@@ -64,6 +102,7 @@ static void print_vec(
 
 int main() {
 
+    /*
     {
         const size_t size = 10'000;
         const size_t thread_count = 200;
@@ -110,32 +149,53 @@ int main() {
         cudaFree(d_B);
         cudaFree(d_C);
     }
+    */
 
     {
         std::cout << "\ncreating two cuda pointers\n";
-        cuda_ptr<float> a(64);
-        cuda_ptr<float> b(64);
+        cuda_1D_array<float> a(64);
+        cuda_1D_array<float> b(64);
         std::cout << a.data() << "\n" << b.data();
     }
 
     {
-        std::cout << "\nnew scope\n";
-        cuda_ptr<float> a(64);
-        cuda_ptr<float> b(64);
+        std::cout << "\nnew scope to test for freeing memory\n";
+        cuda_1D_array<float> a(64);
+        cuda_1D_array<float> b(64);
         std::cout << a.data() << "\n" << b.data() << "\n\n";
-     
-        std::vector<float> v(10, 69.0);
-        a.store(v);
+        
 
-        cudaMemcpy(b.data(), a.data(), 40, cudaMemcpyDeviceToDevice);
+        std::cout << "\ntesting for data transfers\n";
+
+        std::vector<float> v(10, 1.0);
+        print_vec(v);
+
+        a.load_from_host(v.data(), v.size());
 
         std::vector<float> w(10, 0.0);
-        cudaMemcpy(w.data(), b.data(), 20, cudaMemcpyDeviceToHost);
+        print_vec(w);
 
-        for (int i = 0; i < w.size(); i++) 
-        {
-            std::cout << w[i] << " ";
-        }
+        a.load_into_host(w.data(), 5);
+        print_vec(w);
+    }
+
+    {
+        std::cout << "\ntesting memory content after freeing\n";
+        cuda_1D_array<float> a(64);
+        std::cout << a.data() << "\n\n";
+
+        std::vector<float> v(48);
+        print_vec(v);
+
+        a.load_into_host(v.data(), v.size());
+        print_vec(v);
+
+        // won't compile as it should
+        // 
+        // std::vector<int> i(32);
+        // a.load_from_host(i.data(), 32);
+        //
+        // auto b = a;
     }
     return 0;
 }
