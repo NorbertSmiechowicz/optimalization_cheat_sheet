@@ -36,16 +36,16 @@ public:
 
     ~cuda_uptr() noexcept 
     {
-        cudaError_t state = cudaFree(dev_pointer);
+        cudaFree(dev_pointer);
     }
 
     T* release() noexcept { return std::exchange(dev_pointer, nullptr); }
-    void reset(T* ptr_to_assign = nullptr) noexcept 
+    cudaError_t reset(T* ptr_to_assign = nullptr) noexcept
     {
-        T* previous = std::exchange(dev_pointer, ptr_to_assign);
-        if (ptr_to_assign) delete(ptr_to_assign);
+        cudaError_t errcode = cudaFree(dev_pointer);
+        if(errcode != ) dev_pointer = ptr_to_assign;
+        return errcode;
     }
-
     size_t size() { return dev_size; }
     T* data() { return dev_pointer; }
 
