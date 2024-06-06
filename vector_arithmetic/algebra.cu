@@ -4,12 +4,12 @@
 #include <vector>
 
 template<typename T>
-class cuda_1D_array
+class cuda_uptr
 {
 public:
 
-    cuda_1D_array() noexcept : cuda_1D_array{ nullptr } {}
-    explicit cuda_1D_array(size_t size) noexcept : 
+    cuda_uptr() noexcept : cuda_uptr{ nullptr } {}
+    explicit cuda_uptr(size_t size) noexcept : 
         dev_size{ size }
     {
         cudaError_t state = cudaMalloc((void**)&dev_pointer, dev_size * sizeof(T));
@@ -19,18 +19,13 @@ public:
         }
     }
 
-    cuda_1D_array(const cuda_1D_array&) = delete;
-    cuda_1D_array& operator=(const cuda_1D_array&) = delete;
+    // copy constructors
+    cuda_uptr(const cuda_uptr&) = delete;
+    cuda_uptr& operator=(const cuda_uptr&) = delete;
 
-    T* release() noexcept { return std::exchange(dev_pointer, nullptr); }
-    void reset(T* ptr_to_assign = nullptr) noexcept 
-    {
-        T* previous = std::exchange(dev_pointer, ptr_to_assign);
-        if (ptr_to_assign) delete(ptr_to_assign);
-    }
-
-    cuda_1D_array(cuda_1D_array&& other) noexcept : dev_pointer{ other.release() } {}
-    cuda_1D_array& operator=(cuda_1D_array&& other) noexcept 
+    // move constructors
+    cuda_uptr(cuda_uptr&& other) noexcept : dev_pointer{ other.release() } {}
+    cuda_uptr& operator=(cuda_uptr&& other) noexcept 
     {
         if (this != &other) 
         {
@@ -39,9 +34,16 @@ public:
         return *this;
     }
 
-    ~cuda_1D_array() noexcept 
+    ~cuda_uptr() noexcept 
     {
         cudaError_t state = cudaFree(dev_pointer);
+    }
+
+    T* release() noexcept { return std::exchange(dev_pointer, nullptr); }
+    void reset(T* ptr_to_assign = nullptr) noexcept 
+    {
+        T* previous = std::exchange(dev_pointer, ptr_to_assign);
+        if (ptr_to_assign) delete(ptr_to_assign);
     }
 
     size_t size() { return dev_size; }
@@ -153,15 +155,15 @@ int main() {
 
     {
         std::cout << "\ncreating two cuda pointers\n";
-        cuda_1D_array<float> a(64);
-        cuda_1D_array<float> b(64);
+        cuda_uptr<float> a(64);
+        cuda_uptr<float> b(64);
         std::cout << a.data() << "\n" << b.data();
     }
 
     {
         std::cout << "\nnew scope to test for freeing memory\n";
-        cuda_1D_array<float> a(64);
-        cuda_1D_array<float> b(64);
+        cuda_uptr<float> a(64);
+        cuda_uptr<float> b(64);
         std::cout << a.data() << "\n" << b.data() << "\n\n";
         
 
@@ -181,7 +183,7 @@ int main() {
 
     {
         std::cout << "\ntesting memory content after freeing\n";
-        cuda_1D_array<float> a(64);
+        cuda_uptr<float> a(64);
         std::cout << a.data() << "\n\n";
 
         std::vector<float> v(48);

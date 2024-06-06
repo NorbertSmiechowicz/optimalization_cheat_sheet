@@ -4,6 +4,20 @@
 #include <iostream>
 // only used for testing in main
 #include <chrono>
+#include <Eigen/Dense>
+
+template<typename T>
+static Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> eigmat_from(
+    const std::vector<std::vector<T>> a)
+{
+    Eigen::Matrix<T, Eigen::Dynamic, Eigen::Dynamic> temp;
+    temp.resize(a.size(), a[0].size());
+    for(size_t row = 0; row<a.size(); row++)
+    {
+        temp.row(row) = Eigen::Vector<T,-1>::Map(a[row].data(), a[0].size());
+    }
+    return temp;
+}
 
 template<size_t length, typename T>
 static void print_arr(
@@ -515,11 +529,12 @@ int main(){
         print_arr(a);
         print_arr(b);
         print_arr(mat_mul_3(a,mat_transpose(b)));
-    }*/
+    }
+    */
 
     {
         auto a = [](){
-            const size_t rows = 200, columns = 10'000;
+            const size_t rows = 200, columns = 5'000;
             std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
@@ -531,7 +546,7 @@ int main(){
         }();
 
         auto b = [](){
-            const size_t rows = 10'000, columns = 1;
+            const size_t rows = 5'000, columns = 1;
             std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
             for(int i = 0; i < rows; i++){
                 for(int j = 0; j<columns; j++)
@@ -574,6 +589,86 @@ int main(){
 
         end = std::chrono::steady_clock::now();
         std::cout << "Optim3 Array -> Vector Time:\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
+
+
+        auto A = eigmat_from(a);
+        auto B = eigmat_from(b);
+
+        begin = std::chrono::steady_clock::now();
+
+        Eigen::Matrix<float,-1,-1> C = A*B;
+        for(size_t i = 1; i < repeats; i++){
+            C = A*B;
+        }
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "Eigen/Dense Time:\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
+
+    }
+
+    {
+        
+        auto a = [](){
+            const size_t rows = 200, columns = 400;
+            std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
+            for(int i = 0; i < rows; i++){
+                for(int j = 0; j<columns; j++)
+                {
+                    _a[i][j] = static_cast<float>(i) / 1000.0;
+                }
+            }
+            return _a;
+        }();
+
+        auto b = [](){
+            const size_t rows = 400, columns = 100;
+            std::vector<std::vector<float>> _a(rows, std::vector<float>(columns));
+            for(int i = 0; i < rows; i++){
+                for(int j = 0; j<columns; j++)
+                {
+                    _a[i][j] = 1.0;
+                }
+            }
+            return _a;
+        }();
+
+        const size_t repeats = 1'000;
+
+        std::cout<<"------------------------------------------------------\n";
+        std::cout<<"My best on heap allocated vs Eigen\nrepeats: " << repeats << ", A : ";
+        print_arr_dims(a);
+        std::cout<<"  B : ";
+        print_arr_dims(b);
+        std::cout<<"\n------------------------------------------------------\n";
+
+        begin = std::chrono::steady_clock::now();
+
+        auto c = mat_mul_3(a,mat_transpose(b));
+        for(size_t i = 0; i < repeats; i++)
+        {
+            c = mat_mul_3(a,mat_transpose(b));
+        }
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "My best Time:\t\t\t\t" 
+            << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
+
+
+        auto A = eigmat_from(a);
+        auto B = eigmat_from(b);
+
+        begin = std::chrono::steady_clock::now();
+
+        Eigen::Matrix<float,-1,-1> C = A*B;
+        for(size_t i = 1; i < repeats; i++)
+        {
+            C = A*B;
+        }
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "Eigen/Dense Time:\t\t\t" 
             << std::chrono::duration_cast<std::chrono::microseconds> (end - begin).count() << "[us]\n";
 
     }
