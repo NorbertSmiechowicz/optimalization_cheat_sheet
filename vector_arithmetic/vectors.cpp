@@ -6,6 +6,9 @@
 #include <thread>
 #include <vector>
 #include <future>
+// comparing to STL
+#include "custom_templates.h"
+#include <numeric>
 
 
 static float best_single_thread(const float* a, const float* b, const int no_iters) {
@@ -42,11 +45,20 @@ static float best_single_thread(const float* a, const float* b, const int no_ite
 
 int main(int argc, char* argv[])
 {
-    float a[2048], b[2048];
-    for (int i = 0; i < 2048; i++){
-        a[i] = i;
-        b[i] = 2047.0 - i;
-    }
+    auto a = [](){
+        std::vector<float> temp(2048);
+        for (int i = 0; i < 2048; i++){
+            temp[i] = static_cast<float>(i);
+        }
+        return temp;
+    }();
+    auto b = [](){
+        std::vector<float> temp(2048);
+        for (int i = 0; i < 2048; i++){
+            temp[i] = 2047.0 - static_cast<float>(i);
+        }
+        return temp;
+    }();
 
     std::chrono::steady_clock::time_point begin, end;
     
@@ -67,6 +79,19 @@ int main(int argc, char* argv[])
     }
 
     {
+        float s;
+        begin = std::chrono::steady_clock::now();
+        
+        for(size_t repeats = 0; repeats < 200000; repeats++){
+            s = std::inner_product(a.begin(), a.end(), b.begin(), (float)0.0);
+        }
+
+        end = std::chrono::steady_clock::now();
+        std::cout << "std::inner_product value:\t\t" << std::setprecision(10) << s
+            << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+    }
+
+    {
         __m128 s;
         float _s[4];
         begin = std::chrono::steady_clock::now();
@@ -75,7 +100,7 @@ int main(int argc, char* argv[])
             s = _mm_setzero_ps();
             for (int i = 0; i < 2048; i += 4)
             {
-                s = _mm_add_ps(s, _mm_mul_ps(_mm_load_ps(a + i), _mm_load_ps(b + i)));
+                s = _mm_add_ps(s, _mm_mul_ps(_mm_load_ps(a.data() + i), _mm_load_ps(b.data() + i)));
             }
             _mm_storeu_ps(_s, s);
             for (int i = 1; i < 4; i++)
@@ -97,7 +122,7 @@ int main(int argc, char* argv[])
             s = _mm256_setzero_ps();
             for (int i = 0; i < 2048; i += 8)
             {
-                s = _mm256_add_ps(s, _mm256_mul_ps(_mm256_load_ps(a + i), _mm256_load_ps(b + i)));
+                s = _mm256_add_ps(s, _mm256_mul_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i)));
             }
             _mm256_storeu_ps(_s, s);
             for (int i = 1; i < 8; i++)
@@ -119,7 +144,7 @@ int main(int argc, char* argv[])
             s = _mm512_setzero_ps();
             for (int i = 0; i < 2048; i += 16)
             {
-                s = _mm512_add_ps(s, _mm512_mul_ps(_mm512_load_ps(a + i), _mm512_load_ps(b + i)));
+                s = _mm512_add_ps(s, _mm512_mul_ps(_mm512_load_ps(a.data() + i), _mm512_load_ps(b.data() + i)));
             }
             _mm512_storeu_ps(_s, s);
             for (int i = 1; i < 16; i++)
@@ -163,8 +188,8 @@ int main(int argc, char* argv[])
             s_1 = _mm256_setzero_ps();
             for (int i = 0; i < 2048; i += 16)
             {
-                s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a + i), _mm256_load_ps(b + i)));
-                s_1 = _mm256_add_ps(s_1, _mm256_mul_ps(_mm256_load_ps(a + i + 8), _mm256_load_ps(b + i + 8)));
+                s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i)));
+                s_1 = _mm256_add_ps(s_1, _mm256_mul_ps(_mm256_load_ps(a.data() + i + 8), _mm256_load_ps(b.data() + i + 8)));
             }
             s_0 = _mm256_add_ps(s_0, s_1);
             _mm256_storeu_ps(_s, s_0);
@@ -189,11 +214,11 @@ int main(int argc, char* argv[])
             s_2 = _mm256_setzero_ps();
             for (int i = 0; i < 2040; i += 24)
             {
-                s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a + i), _mm256_load_ps(b + i)));
-                s_1 = _mm256_add_ps(s_1, _mm256_mul_ps(_mm256_load_ps(a + i + 8), _mm256_load_ps(b + i + 8)));
-                s_2 = _mm256_add_ps(s_2, _mm256_mul_ps(_mm256_load_ps(a + i + 16), _mm256_load_ps(b + i + 16)));
+                s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i)));
+                s_1 = _mm256_add_ps(s_1, _mm256_mul_ps(_mm256_load_ps(a.data() + i + 8), _mm256_load_ps(b.data() + i + 8)));
+                s_2 = _mm256_add_ps(s_2, _mm256_mul_ps(_mm256_load_ps(a.data() + i + 16), _mm256_load_ps(b.data() + i + 16)));
             }
-            s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a + 2040), _mm256_load_ps(b + 2040)));
+            s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a.data() + 2040), _mm256_load_ps(b.data() + 2040)));
 
             s_0 = _mm256_add_ps(s_0, s_1);
             s_0 = _mm256_add_ps(s_0, s_2);
@@ -220,10 +245,10 @@ int main(int argc, char* argv[])
             s_3 = _mm256_setzero_ps();
             for (int i = 0; i < 2048; i += 32)
             {
-                s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a + i), _mm256_load_ps(b + i)));
-                s_1 = _mm256_add_ps(s_1, _mm256_mul_ps(_mm256_load_ps(a + i + 8), _mm256_load_ps(b + i + 8)));
-                s_2 = _mm256_add_ps(s_2, _mm256_mul_ps(_mm256_load_ps(a + i + 16), _mm256_load_ps(b + i + 16)));
-                s_3 = _mm256_add_ps(s_3, _mm256_mul_ps(_mm256_load_ps(a + i + 24), _mm256_load_ps(b + i + 24)));
+                s_0 = _mm256_add_ps(s_0, _mm256_mul_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i)));
+                s_1 = _mm256_add_ps(s_1, _mm256_mul_ps(_mm256_load_ps(a.data() + i + 8), _mm256_load_ps(b.data() + i + 8)));
+                s_2 = _mm256_add_ps(s_2, _mm256_mul_ps(_mm256_load_ps(a.data() + i + 16), _mm256_load_ps(b.data() + i + 16)));
+                s_3 = _mm256_add_ps(s_3, _mm256_mul_ps(_mm256_load_ps(a.data() + i + 24), _mm256_load_ps(b.data() + i + 24)));
             }
             s_0 = _mm256_add_ps(s_0, s_1);
             s_0 = _mm256_add_ps(s_0, s_2);
@@ -240,6 +265,32 @@ int main(int argc, char* argv[])
             << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
     }
 
+    {
+        nla::vec8f32 s_0, s_1, s_2, s_3;
+        float s;
+
+        begin = std::chrono::steady_clock::now();
+        for (int j = 0; j < 200000; j++)
+        {
+            s_0.clear();
+            s_1.clear();
+            s_2.clear();
+            s_3.clear();
+            for (int i = 0; i < 2048; i += 32)
+            {
+                s_0 = s_0 + (nla::vec8f32(a.data() + i) * nla::vec8f32(b.data() + i));
+                s_1 = s_1 + (nla::vec8f32(a.data() + i + 8) * nla::vec8f32(b.data() + i + 8));
+                s_2 = s_2 + (nla::vec8f32(a.data() + i + 16) * nla::vec8f32(b.data() + i + 16));
+                s_3 = s_3 + (nla::vec8f32(a.data() + i + 24) * nla::vec8f32(b.data() + i + 24));
+            }
+            s_0 = s_0 + s_1 + s_2 + s_3;
+            s = s_0.sum();
+        }
+        end = std::chrono::steady_clock::now();
+        std::cout << "|_> custom types / op overload:\t\t" << std::setprecision(10) << s
+            << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+    }
+
     std::cout << "-------------------------\n";
 
     {
@@ -251,7 +302,7 @@ int main(int argc, char* argv[])
             s = _mm256_setzero_ps();
             for (int i = 0; i < 2048; i += 8)
             {
-                s = _mm256_fmadd_ps(_mm256_load_ps(a + i), _mm256_load_ps(b + i), s);
+                s = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i), s);
             }
             _mm256_storeu_ps(_s, s);
             for (int i = 1; i < 8; i++)
@@ -261,6 +312,37 @@ int main(int argc, char* argv[])
         }
         end = std::chrono::steady_clock::now();
         std::cout << "FMA3 mulladd value:\t\t\t" << std::setprecision(10) << *_s
+            << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+    }
+
+    {
+        __m256 s_0, s_1, s_2;
+        float _s[8];
+
+        begin = std::chrono::steady_clock::now();
+        for (int j = 0; j < 200000; j++)
+        {
+            s_0 = _mm256_setzero_ps();
+            s_1 = _mm256_setzero_ps();
+            s_2 = _mm256_setzero_ps();
+            for (int i = 0; i < 2040; i += 24)
+            {
+                s_0 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i), s_0);
+                s_1 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i + 8), _mm256_load_ps(b.data() + i + 8), s_1);
+                s_2 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i + 16), _mm256_load_ps(b.data() + i + 16), s_2);
+            }
+            s_0 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + 2040), _mm256_load_ps(b.data() + 2040), s_0);
+            s_0 = _mm256_add_ps(s_0, s_1);
+            s_0 = _mm256_add_ps(s_0, s_2);
+
+            _mm256_storeu_ps(_s, s_0);
+            for (int i = 1; i < 8; i++)
+            {
+                _s[0] += _s[i];
+            }
+        }
+        end = std::chrono::steady_clock::now();
+        std::cout << "ChIx3 FMA3 mulladd value:\t\t" << std::setprecision(10) << *_s
             << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
     }
 
@@ -277,10 +359,10 @@ int main(int argc, char* argv[])
             s_3 = _mm256_setzero_ps();
             for (int i = 0; i < 2048; i += 32)
             {
-                s_0 = _mm256_fmadd_ps(_mm256_load_ps(a + i), _mm256_load_ps(b + i), s_0);
-                s_1 = _mm256_fmadd_ps(_mm256_load_ps(a + i + 8), _mm256_load_ps(b + i + 8), s_1);
-                s_2 = _mm256_fmadd_ps(_mm256_load_ps(a + i + 16), _mm256_load_ps(b + i + 16), s_2);
-                s_3 = _mm256_fmadd_ps(_mm256_load_ps(a + i + 24), _mm256_load_ps(b + i + 24), s_3);
+                s_0 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i), _mm256_load_ps(b.data() + i), s_0);
+                s_1 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i + 8), _mm256_load_ps(b.data() + i + 8), s_1);
+                s_2 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i + 16), _mm256_load_ps(b.data() + i + 16), s_2);
+                s_3 = _mm256_fmadd_ps(_mm256_load_ps(a.data() + i + 24), _mm256_load_ps(b.data() + i + 24), s_3);
             }
             s_0 = _mm256_add_ps(s_0, s_1);
             s_0 = _mm256_add_ps(s_0, s_2);
@@ -294,6 +376,32 @@ int main(int argc, char* argv[])
         }
         end = std::chrono::steady_clock::now();
         std::cout << "ChIx4 FMA3 mulladd value:\t\t" << std::setprecision(10) << *_s
+            << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
+    }
+
+    {
+        nla::vec8f32 s_0, s_1, s_2, s_3;
+        float s;
+
+        begin = std::chrono::steady_clock::now();
+        for (int j = 0; j < 200000; j++)
+        {
+            s_0.clear();
+            s_1.clear();
+            s_2.clear();
+            s_3.clear();
+            for (int i = 0; i < 2048; i += 32)
+            {
+                s_0.addmult(a.data() + i, b.data() + i);
+                s_1.addmult(a.data() + i + 8, b.data() + i + 8);
+                s_2.addmult(a.data() + i + 16, b.data() + i + 16);
+                s_3.addmult(a.data() + i + 24, b.data() + i + 24);
+            }
+            s_0 = s_0 + s_1 + s_2 + s_3;
+            s = s_0.sum();
+        }
+        end = std::chrono::steady_clock::now();
+        std::cout << "|_> implemented with custom types:\t" << std::setprecision(10) << s
             << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
     }
 
@@ -362,7 +470,7 @@ int main(int argc, char* argv[])
 
         for (int i = 0; i < 4; i++)
         {
-            threads.push_back(std::async(best_single_thread, a, b, 200000 / 4));
+            threads.push_back(std::async(best_single_thread, a.data(), b.data(), 200000 / 4));
         }
 
         for (int i = 0; i < 4; i++) {
@@ -383,7 +491,7 @@ int main(int argc, char* argv[])
 
         for (int i = 0; i < 8; i++)
         {
-            threads.push_back(std::async(best_single_thread, a, b, 200000 / 8));
+            threads.push_back(std::async(best_single_thread, a.data(), b.data(), 200000 / 8));
         }
 
         for (int i = 0; i < 8; i++) {
@@ -395,6 +503,7 @@ int main(int argc, char* argv[])
         std::cout << "8 Threads value:\t\t\t" << std::setprecision(10) << *_s
             << "\ttime:\t" << std::chrono::duration_cast<std::chrono::nanoseconds> (end - begin).count() << "[ns]\n";
     }
+
 
     /*{
         float _s[8];
@@ -468,10 +577,10 @@ int main(int argc, char* argv[])
             s_3 = _mm512_setzero_ps();
             for (int i = 0; i < 2048; i += 64)
             {
-                s_0 = _mm512_fmadd_ps(_mm512_load_ps(a + i), _mm512_load_ps(b + i), s_0);
-                s_1 = _mm512_fmadd_ps(_mm512_load_ps(a + i + 16), _mm512_load_ps(b + i + 16), s_1);
-                s_2 = _mm512_fmadd_ps(_mm512_load_ps(a + i + 32), _mm512_load_ps(b + i + 32), s_2);
-                s_3 = _mm512_fmadd_ps(_mm512_load_ps(a + i + 48), _mm512_load_ps(b + i + 48), s_3);
+                s_0 = _mm512_fmadd_ps(_mm512_load_ps(a.data() + i), _mm512_load_ps(b.data() + i), s_0);
+                s_1 = _mm512_fmadd_ps(_mm512_load_ps(a.data() + i + 16), _mm512_load_ps(b.data() + i + 16), s_1);
+                s_2 = _mm512_fmadd_ps(_mm512_load_ps(a.data() + i + 32), _mm512_load_ps(b.data() + i + 32), s_2);
+                s_3 = _mm512_fmadd_ps(_mm512_load_ps(a.data() + i + 48), _mm512_load_ps(b.data() + i + 48), s_3);
             }
             s_0 = _mm512_add_ps(s_0, s_1);
             s_0 = _mm512_add_ps(s_0, s_2);
